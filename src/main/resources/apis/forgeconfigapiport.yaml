@@ -1,0 +1,130 @@
+name: Forge Config API Port
+
+# The Fabric port of the Configuration Files element generates code against the Forge configuration API that
+# Forge Config API Port provides on Fabric. Every implementation below adds the compile time dependency and the
+# runtime dependency of the port to the workspace. The mod id of the API definition (and therefore the id used in
+# fabric.mod.json) is the mod id of the port itself.
+#
+# Minecraft 1.20.1 up to 1.21.11 workspaces use the remapping Fabric Loom, where a mod dependency is declared with
+# modImplementation. Minecraft 26.1 and later are unobfuscated, the workspace generator uses the new Fabric Loom
+# without remapping and without any mod configuration, so the port is a regular implementation dependency there.
+#
+# The Modrinth Maven coordinate is the published version number of the release. Releases up to 1.21.8 carry the
+# loader in the version number (for example v21.8.2-1.21.8-Fabric). For 1.21.11 and 26.x the same version number is
+# shared by the Fabric, Forge and NeoForge releases, so the unique Modrinth version id is used to select the Fabric
+# file. The human readable version and file name are noted next to every such dependency.
+#
+# Forge Config API Port bundles Night Config as a jar-in-jar on every supported Minecraft version except 1.20.1,
+# where the library classes are part of the mod jar. Loom neither exposes nested jars to the compile classpath nor
+# loads them into the development run classpath, while ForgeConfigSpec extends types of that library. The Night Config
+# core and toml artifacts are therefore declared as regular dependencies: they are needed to compile the generated
+# config class and to run the development client. They are not packaged into the mod jar, the runtime classes of an
+# installed mod are supplied by the port itself.
+
+fabric-1.20.1:
+  required_when_enabled: true
+  version_range: ">=8.0.3"
+  gradle: |
+    repositories {
+        maven {
+            name = 'Modrinth'
+            url = 'https://api.modrinth.com/maven'
+        }
+    }
+
+    dependencies {
+        modImplementation 'maven.modrinth:forge-config-api-port:v8.0.3-1.20.1-Fabric'
+    }
+
+fabric-1.21.1:
+  required_when_enabled: true
+  version_range: ">=21.1.6"
+  gradle: |
+    repositories {
+        mavenCentral()
+        maven {
+            name = 'Modrinth'
+            url = 'https://api.modrinth.com/maven'
+        }
+    }
+
+    dependencies {
+        modImplementation 'maven.modrinth:forge-config-api-port:v21.1.6-1.21.1-Fabric'
+        implementation 'com.electronwill.night-config:core:3.8.0'
+        implementation 'com.electronwill.night-config:toml:3.8.0'
+    }
+
+fabric-1.21.8:
+  required_when_enabled: true
+  version_range: ">=21.8.2"
+  gradle: |
+    repositories {
+        mavenCentral()
+        maven {
+            name = 'Modrinth'
+            url = 'https://api.modrinth.com/maven'
+        }
+    }
+
+    dependencies {
+        modImplementation 'maven.modrinth:forge-config-api-port:v21.8.2-1.21.8-Fabric'
+        implementation 'com.electronwill.night-config:core:3.8.3'
+        implementation 'com.electronwill.night-config:toml:3.8.3'
+    }
+
+fabric-1.21.11:
+  required_when_enabled: true
+  version_range: ">=21.11.1"
+  gradle: |
+    repositories {
+        mavenCentral()
+        maven {
+            name = 'Modrinth'
+            url = 'https://api.modrinth.com/maven'
+        }
+    }
+
+    dependencies {
+        // 21.11.1, ForgeConfigAPIPort-v21.11.1-mc1.21.11-Fabric.jar
+        modImplementation 'maven.modrinth:forge-config-api-port:uXrWPsCu'
+        implementation 'com.electronwill.night-config:core:3.8.4'
+        implementation 'com.electronwill.night-config:toml:3.8.4'
+    }
+
+fabric-26.1.2:
+  required_when_enabled: true
+  version_range: ">=26.1.5"
+  gradle: |
+    repositories {
+        mavenCentral()
+        maven {
+            name = 'Modrinth'
+            url = 'https://api.modrinth.com/maven'
+        }
+    }
+
+    dependencies {
+        // 26.1.5, ForgeConfigAPIPort-v26.1.5-mc26.1.x-Fabric.jar
+        implementation 'maven.modrinth:forge-config-api-port:jUe0ucoE'
+        implementation 'com.electronwill.night-config:core:3.8.3'
+        implementation 'com.electronwill.night-config:toml:3.8.3'
+    }
+
+fabric-26.3:
+  required_when_enabled: true
+  version_range: ">=26.3.1"
+  gradle: |
+    repositories {
+        mavenCentral()
+        maven {
+            name = 'Modrinth'
+            url = 'https://api.modrinth.com/maven'
+        }
+    }
+
+    dependencies {
+        // 26.3.1, ForgeConfigAPIPort-v26.3.1-mc26.3.x-Fabric.jar
+        implementation 'maven.modrinth:forge-config-api-port:JpKvrr9J'
+        implementation 'com.electronwill.night-config:core:3.8.4'
+        implementation 'com.electronwill.night-config:toml:3.8.4'
+    }

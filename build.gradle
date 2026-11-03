@@ -1,0 +1,42 @@
+plugins {
+    id 'java'
+}
+
+group = 'com.litqa.forgeconfigapiport'
+version = '1.0.4-beta'
+
+description = 'Configuration Files (Forge Config API Port) - MCreator plugin'
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(25)
+    }
+}
+
+repositories {
+    // No remote repositories are required: the MCreator API and Log4j API are vendored in libs/ for compilation only.
+}
+
+dependencies {
+    compileOnly files('libs/mcreator-api.jar', 'libs/log4j-api-2.26.1.jar')
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8'
+    options.release = 25
+    options.compilerArgs.add('-Xlint:all')
+}
+
+// The plugin package is an archive that MCreator loads directly. It contains the plugin descriptor, the compiled
+// plugin classes and every resource (Blockly definitions, templates, mappings, language files and themes) at the
+// archive root, exactly like a manual plugin installation package.
+jar {
+    archiveFileName = 'forge-config-api-port.zip'
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+    exclude 'META-INF/*.SF', 'META-INF/*.DSA', 'META-INF/*.RSA'
+}
+
+// Resources contain FreeMarker expressions, so resource processing must not expand Gradle tokens.
+processResources {
+    filteringCharset = 'UTF-8'
+}
