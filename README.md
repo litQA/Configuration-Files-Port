@@ -7,8 +7,6 @@ A MCreator plugin that ports the **Configuration Files** mod element by NerdyPuz
 | | |
 | --- | --- |
 | Plugin id | `forge-config-api` |
-| Plugin version | `1.0.4-beta` |
-| MCreator | EAP 2026.3.44621 (`202600344621`) |
 | Java | 25 |
 | Plugin Java package | `com.litqa.forgeconfigapiport` |
 | Supported Fabric generators | `fabric-1.20.1`, `fabric-1.21.1`, `fabric-1.21.8`, `fabric-1.21.11`, `fabric-26.1.2`, `fabric-26.3` |
@@ -240,9 +238,23 @@ target installation; the 1.21.8 workspace compiled and reached client launch dur
 `libs/mcreator-api.jar` contains the MCreator EAP class files and is used exclusively to compile this plugin. It is not
 packaged into `forge-config-api-port.zip`; MCreator provides these classes at runtime.
 
+## DSH Empowers Accelerated Plugin Development
+
+<img width="1000" alt="dsh" src="https://github.com/user-attachments/assets/1b0b22c9-5213-48eb-9e51-6de70e852dec" />
+
+This project includes code generated with **DSH (AI)** assistance.
+
 ## License and attribution
 
 The plugin is licensed under CC BY-NC 4.0, see `LICENSE`. The element definition, Blockly definitions, user interface
 and language files are derived from the Configuration Files plugin by NerdyPuzzle, which is distributed under the MIT
 license; the original notice is reproduced in `THIRD-PARTY-NOTICES.md`. Forge Config API Port is a separate mod by Fuzs
 under MPL-2.0 and is not redistributed with this plugin.
+
+# MCreator - Minecraft Mod Maker
+
+[![MCreator](https://mcreator.net/image/brand/mcreator300s.png)](https://mcreator.net/)
+
+MCreator is an open-source software used to make Minecraft Java Edition mods, Minecraft Bedrock Edition Add-Ons, resource packs, and data packs using an intuitive easy-to-learn interface or with an integrated code editor. It is used worldwide by Minecraft players, aspiring mod developers, for education, online classes, and STEM workshops. 
+
+NOT AN OFFICIAL MINECRAFT PRODUCT. NOT APPROVED BY OR ASSOCIATED WITH MOJANG OR MICROSOFT.
