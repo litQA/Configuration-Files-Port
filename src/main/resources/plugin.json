@@ -3,13 +3,12 @@
   "weight": 3001,
   "javaplugin": "com.litqa.forgeconfigapiport.Launcher",
   "supportedversions": [
-    202600344621,
-    2026003
+    2026001
   ],
   "info": {
     "name": "Configuration Files (Forge Config API Port)",
-    "version": "1.0.4-beta",
-    "description": "Adds a configuration file element backed by Forge Config API Port for the Fabric generators. Element, field and template names are identical to the Configuration Files plugin it ports.",
+    "version": "2026.1-1.1.1-beta",
+    "description": "Adds a configuration file element backed by native Forge config on Forge 1.16.5 to 1.20.1 and by Forge Config API Port on NeoForge 1.20.4, NeoForge 1.20.6, NeoForge 1.21.1, NeoForge 1.21.4, NeoForge 1.21.8 and Fabric 1.21.8. Element, field and template names are identical to the Configuration Files plugin it ports.",
     "author": "LitQA",
     "credits": "Element definitions and user interface based on the Configuration Files plugin by NerdyPuzzle",
     "license": "CC BY-NC 4.0"

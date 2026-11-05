@@ -1,29 +1,33 @@
 name: Forge Config API Port
 
-# The Fabric port of the Configuration Files element generates code against the Forge configuration API that
-# Forge Config API Port provides on Fabric. Every implementation below adds the compile time dependency and the
-# runtime dependency of the port to the workspace. The mod id of the API definition (and therefore the id used in
-# fabric.mod.json) is the mod id of the port itself.
+# The Configuration Files element generates native Forge configuration code on Forge 1.16.5 to 1.20.1 and code against
+# Forge Config API Port on NeoForge and Fabric. The port implementations below add the compile time dependency and the
+# runtime dependency of the port to the workspace. The mod id of the API definition (and therefore the id used in the
+# generated mod metadata) is the mod id of the port itself.
 #
-# Minecraft 1.20.1 up to 1.21.11 workspaces use the remapping Fabric Loom, where a mod dependency is declared with
-# modImplementation. Minecraft 26.1 and later are unobfuscated, the workspace generator uses the new Fabric Loom
-# without remapping and without any mod configuration, so the port is a regular implementation dependency there.
+# Fabric 1.21.8 uses the remapping Fabric Loom, where a mod dependency is declared with modImplementation. Loom neither
+# exposes the Night Config jar-in-jar of the port to the compile classpath nor loads it into the development run
+# classpath, while ForgeConfigSpec extends types of that library. The Night Config core and toml artifacts are therefore
+# declared as regular dependencies. They are not packaged into the mod jar; an installed mod receives them from the port
+# itself.
 #
-# The Modrinth Maven coordinate is the published version number of the release. Releases up to 1.21.8 carry the
-# loader in the version number (for example v21.8.2-1.21.8-Fabric). For 1.21.11 and 26.x the same version number is
-# shared by the Fabric, Forge and NeoForge releases, so the unique Modrinth version id is used to select the Fabric
-# file. The human readable version and file name are noted next to every such dependency.
+# NeoForge 1.20.4, 1.20.6, 1.21.1, 1.21.4 and 1.21.8 use Mojang mappings and do not remap mod dependencies, so the
+# NeoForge publication of the port is a regular implementation dependency there. NeoForge and FancyModLoader already
+# supply Night Config on the compile and development run classpath, so no additional Night Config artifacts are declared
+# for those generators. The version ranges are Maven ranges, because the NeoForge mod metadata generator consumes them
+# verbatim.
 #
-# Forge Config API Port bundles Night Config as a jar-in-jar on every supported Minecraft version except 1.20.1,
-# where the library classes are part of the mod jar. Loom neither exposes nested jars to the compile classpath nor
-# loads them into the development run classpath, while ForgeConfigSpec extends types of that library. The Night Config
-# core and toml artifacts are therefore declared as regular dependencies: they are needed to compile the generated
-# config class and to run the development client. They are not packaged into the mod jar, the runtime classes of an
-# installed mod are supplied by the port itself.
+# The Forge 1.16.5 to 1.20.1 implementations are compatibility markers only. Forge has the configuration API built in,
+# so these entries must not add a Gradle dependency or generated code. They exist so a workspace that has the port API
+# enabled can switch from a NeoForge or Fabric generator to a Forge generator without MCreator reporting a missing API.
+# The empty gradle string is intentional: the Gradle integration appends this value to mcreator.gradle, and an omitted
+# value would be written as the literal null. If the compatibility marker remains enabled after conversion, the Forge
+# metadata may contain an optional forgeconfigapiport entry. It does not make the port a required Forge dependency and
+# does not change the Forge build.
 
-fabric-1.20.1:
+neoforge-1.20.4:
   required_when_enabled: true
-  version_range: ">=8.0.3"
+  version_range: "[20.4.3,)"
   gradle: |
     repositories {
         maven {
@@ -33,15 +37,14 @@ fabric-1.20.1:
     }
 
     dependencies {
-        modImplementation 'maven.modrinth:forge-config-api-port:v8.0.3-1.20.1-Fabric'
+        implementation 'maven.modrinth:forge-config-api-port:v20.4.3-1.20.4-NeoForge'
     }
 
-fabric-1.21.1:
+neoforge-1.20.6:
   required_when_enabled: true
-  version_range: ">=21.1.6"
+  version_range: "[20.6.1,)"
   gradle: |
     repositories {
-        mavenCentral()
         maven {
             name = 'Modrinth'
             url = 'https://api.modrinth.com/maven'
@@ -49,9 +52,52 @@ fabric-1.21.1:
     }
 
     dependencies {
-        modImplementation 'maven.modrinth:forge-config-api-port:v21.1.6-1.21.1-Fabric'
-        implementation 'com.electronwill.night-config:core:3.8.0'
-        implementation 'com.electronwill.night-config:toml:3.8.0'
+        implementation 'maven.modrinth:forge-config-api-port:v20.6.1-1.20.6-NeoForge'
+    }
+
+neoforge-1.21.1:
+  required_when_enabled: true
+  version_range: "[21.1.6,)"
+  gradle: |
+    repositories {
+        maven {
+            name = 'Modrinth'
+            url = 'https://api.modrinth.com/maven'
+        }
+    }
+
+    dependencies {
+        implementation 'maven.modrinth:forge-config-api-port:v21.1.6-1.21.1-NeoForge'
+    }
+
+neoforge-1.21.4:
+  required_when_enabled: true
+  version_range: "[21.4.3,)"
+  gradle: |
+    repositories {
+        maven {
+            name = 'Modrinth'
+            url = 'https://api.modrinth.com/maven'
+        }
+    }
+
+    dependencies {
+        implementation 'maven.modrinth:forge-config-api-port:v21.4.3-1.21.4-NeoForge'
+    }
+
+neoforge-1.21.8:
+  required_when_enabled: true
+  version_range: "[21.8.2,)"
+  gradle: |
+    repositories {
+        maven {
+            name = 'Modrinth'
+            url = 'https://api.modrinth.com/maven'
+        }
+    }
+
+    dependencies {
+        implementation 'maven.modrinth:forge-config-api-port:v21.8.2-1.21.8-NeoForge'
     }
 
 fabric-1.21.8:
@@ -72,59 +118,32 @@ fabric-1.21.8:
         implementation 'com.electronwill.night-config:toml:3.8.3'
     }
 
-fabric-1.21.11:
-  required_when_enabled: true
-  version_range: ">=21.11.1"
-  gradle: |
-    repositories {
-        mavenCentral()
-        maven {
-            name = 'Modrinth'
-            url = 'https://api.modrinth.com/maven'
-        }
-    }
+forge-1.16.5:
+  required_when_enabled: false
+  version_range: "[0,)"
+  gradle: ""
 
-    dependencies {
-        // 21.11.1, ForgeConfigAPIPort-v21.11.1-mc1.21.11-Fabric.jar
-        modImplementation 'maven.modrinth:forge-config-api-port:uXrWPsCu'
-        implementation 'com.electronwill.night-config:core:3.8.4'
-        implementation 'com.electronwill.night-config:toml:3.8.4'
-    }
+forge-1.17.1:
+  required_when_enabled: false
+  version_range: "[0,)"
+  gradle: ""
 
-fabric-26.1.2:
-  required_when_enabled: true
-  version_range: ">=26.1.5"
-  gradle: |
-    repositories {
-        mavenCentral()
-        maven {
-            name = 'Modrinth'
-            url = 'https://api.modrinth.com/maven'
-        }
-    }
+forge-1.18.2:
+  required_when_enabled: false
+  version_range: "[0,)"
+  gradle: ""
 
-    dependencies {
-        // 26.1.5, ForgeConfigAPIPort-v26.1.5-mc26.1.x-Fabric.jar
-        implementation 'maven.modrinth:forge-config-api-port:jUe0ucoE'
-        implementation 'com.electronwill.night-config:core:3.8.3'
-        implementation 'com.electronwill.night-config:toml:3.8.3'
-    }
+forge-1.19.2:
+  required_when_enabled: false
+  version_range: "[0,)"
+  gradle: ""
 
-fabric-26.3:
-  required_when_enabled: true
-  version_range: ">=26.3.1"
-  gradle: |
-    repositories {
-        mavenCentral()
-        maven {
-            name = 'Modrinth'
-            url = 'https://api.modrinth.com/maven'
-        }
-    }
+forge-1.19.4:
+  required_when_enabled: false
+  version_range: "[0,)"
+  gradle: ""
 
-    dependencies {
-        // 26.3.1, ForgeConfigAPIPort-v26.3.1-mc26.3.x-Fabric.jar
-        implementation 'maven.modrinth:forge-config-api-port:JpKvrr9J'
-        implementation 'com.electronwill.night-config:core:3.8.4'
-        implementation 'com.electronwill.night-config:toml:3.8.4'
-    }
+forge-1.20.1:
+  required_when_enabled: false
+  version_range: "[0,)"
+  gradle: ""

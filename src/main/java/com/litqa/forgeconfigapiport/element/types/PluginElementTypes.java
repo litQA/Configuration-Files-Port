@@ -10,8 +10,9 @@ public class PluginElementTypes {
 	public static ModElementType<?> CONFIG;
 
 	public static void load() {
-		// The element is only covered on Fabric, the only platform Forge Config API Port targets.
+		// The element is covered by the three generator flavors that this branch provides templates for. The generator
+		// coverage of MCreator still hides the element on generator versions without a config definition.
 		CONFIG = register(new ModElementType<>("config", (Character) null, ConfigGUI::new, Config.class)
-				.coveredOn(GeneratorFlavor.FABRIC));
+				.coveredOn(GeneratorFlavor.FORGE, GeneratorFlavor.FABRIC, GeneratorFlavor.NEOFORGE));
 	}
 }

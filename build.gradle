@@ -3,13 +3,13 @@ plugins {
 }
 
 group = 'com.litqa.forgeconfigapiport'
-version = '1.0.4-beta'
+version = '2026.1-1.1.1-beta'
 
-description = 'Configuration Files (Forge Config API Port) - MCreator plugin'
+description = 'Configuration Files (Forge Config API Port) - MCreator 2026.1 plugin'
 
 java {
     toolchain {
-        languageVersion = JavaLanguageVersion.of(25)
+        languageVersion = JavaLanguageVersion.of(21)
     }
 }
 
@@ -18,12 +18,12 @@ repositories {
 }
 
 dependencies {
-    compileOnly files('libs/mcreator-api.jar', 'libs/log4j-api-2.26.1.jar')
+    compileOnly files('libs/mcreator-api.jar', 'libs/log4j-api-2.25.3.jar')
 }
 
 tasks.withType(JavaCompile).configureEach {
     options.encoding = 'UTF-8'
-    options.release = 25
+    options.release = 21
     options.compilerArgs.add('-Xlint:all')
 }
 

@@ -28,7 +28,8 @@ import java.util.regex.Pattern;
  * the names used by the Configuration Files plugin it ports, so workspaces stay compatible.
  */
 public class Config extends NamespacedGeneratableElement {
-    private static final String XML_BASE = "<xml xmlns=\"https://developers.google.com/blockly/xml\"><block type=\"config_start\" deletable=\"false\" x=\"40\" y=\"40\"></block></xml>";
+    /** Default Blockly document of a newly created configuration element. */
+    public static final String XML_BASE = "<xml xmlns=\"https://developers.google.com/blockly/xml\"><block type=\"config_start\" deletable=\"false\" x=\"40\" y=\"40\"></block></xml>";
 
 	/**
 	 * Legacy category data. Only read when a workspace was saved by a plugin version that predates the Blockly based
@@ -40,7 +41,7 @@ public class Config extends NamespacedGeneratableElement {
 	/** Configuration type, one of {@code 0} (common), {@code 1} (server) or {@code 2} (client). */
 	public int configType;
 	/** Root Blockly document of the configuration editor. */
-	@BlocklyXML(name = "config", defaultXML = XML_BASE)
+	@BlocklyXML("configs")
 	public String config;
 	/** Switches the Blockly code generators between field declaration and value definition output. */
 	public boolean defining = true;

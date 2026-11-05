@@ -8,15 +8,17 @@ reproduced below.
 
 ## Forge Config API Port
 
-The generated mods depend on Forge Config API Port by Fuzs (`forgeconfigapiport`), which is licensed under MPL-2.0.
-Forge Config API Port is not redistributed with this plugin. It is resolved as a Gradle dependency of the generated mod
-through the `forgeconfigapiport` ModAPI definition shipped with this plugin.
+On NeoForge and Fabric, the generated mods depend on Forge Config API Port by Fuzs (`forgeconfigapiport`), which is
+licensed under MPL-2.0. Forge Config API Port is not redistributed with this plugin. It is resolved as a Gradle
+dependency of the generated mod through the `forgeconfigapiport` ModAPI definition shipped with this plugin, using the
+Fabric publication on Fabric and the NeoForge publication on NeoForge. Native Forge 1.16.5 to 1.20.1 use the built-in
+Forge configuration API and do not depend on the Port.
 
 ## Compile time references (`libs/`)
 
-* `libs/mcreator-api.jar` contains the class files of the MCreator EAP 2026.3.44621 runtime. It is used only to compile
-  this plugin and is not packaged into the plugin archive. MCreator is a project by Pylo.
-* `libs/log4j-api-2.26.1.jar` is the Apache Log4j API, licensed under the Apache License 2.0. It is used only to
+* `libs/mcreator-api.jar` contains the class files of the MCreator 2026.1 runtime. It is used only to compile this
+  plugin and is not packaged into the plugin archive. MCreator is a project by Pylo.
+* `libs/log4j-api-2.25.3.jar` is the Apache Log4j API, licensed under the Apache License 2.0. It is used only to
   compile this plugin; MCreator provides the Log4j API at runtime.
 
 ---

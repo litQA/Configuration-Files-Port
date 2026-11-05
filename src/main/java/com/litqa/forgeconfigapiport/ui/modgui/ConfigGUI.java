@@ -1,13 +1,11 @@
 package com.litqa.forgeconfigapiport.ui.modgui;
 
 import net.mcreator.blockly.BlocklyCompileNote;
-import net.mcreator.blockly.InternalBlocksLoader;
 import net.mcreator.blockly.data.BlocklyLoader;
-import net.mcreator.blockly.data.DynamicBlockLoader;
 import net.mcreator.blockly.data.ToolboxBlock;
 import net.mcreator.blockly.data.ToolboxType;
 import net.mcreator.blockly.java.BlocklyToJava;
-import net.mcreator.element.util.AnnotationUtils;
+import net.mcreator.generator.GeneratorFlavor;
 import net.mcreator.generator.blockly.BlocklyBlockCodeGenerator;
 import net.mcreator.generator.blockly.OutputBlockCodeGenerator;
 import net.mcreator.generator.blockly.ProceduralBlockCodeGenerator;
@@ -63,17 +61,17 @@ public class ConfigGUI extends ModElementGUI<Config> implements IBlocklyPanelHol
         this.externalBlocks = BlocklyLoader.INSTANCE.getBlockLoader(Launcher.CONFIG_EDITOR).getDefinedBlocks();
         this.blocklyPanel = new BlocklyPanel(this.mcreator, Launcher.CONFIG_EDITOR);
         this.blocklyPanel.addTaskToRunAfterLoaded(() -> {
-            InternalBlocksLoader.loadBlocksAndCategoriesInPanel(blocklyPanel);
-            DynamicBlockLoader.loadBlocksAndCategoriesInPanel(blocklyPanel);
             BlocklyLoader.INSTANCE.getBlockLoader(Launcher.CONFIG_EDITOR)
                     .loadBlocksAndCategoriesInPanel(blocklyPanel, ToolboxType.EMPTY);
+            for (var variable : this.mcreator.getWorkspace().getVariableElements()) {
+                this.blocklyPanel.addGlobalVariable(variable.getName(), variable.getType().getBlocklyVariableType());
+            }
             blocklyPanel.addChangeListener(
-                    _ -> new Thread(() -> regenerateBlockAssemblies(true), "ConfigRegenerate").start());
+                    event -> new Thread(() -> regenerateBlockAssemblies(true), "ConfigRegenerate").start());
+            if (!this.isEditingMode()) {
+                this.blocklyPanel.setInitialXML(Config.XML_BASE);
+            }
         });
-
-        if (!this.isEditingMode()) {
-            this.blocklyPanel.setInitialXML(AnnotationUtils.getBlocklyXMLDefaultValue(Config.class, "config"));
-        }
 
         JPanel northPanel = new JPanel(new GridLayout(2, 2, 10, 2));
         northPanel.setOpaque(false);
@@ -126,7 +124,11 @@ public class ConfigGUI extends ModElementGUI<Config> implements IBlocklyPanelHol
             return List.of();
         }
 
-        List<BlocklyCompileNote> compileNotesArrayList = blocklyToJava.getCompileNotes();
+        List<BlocklyCompileNote> compileNotesArrayList = new ArrayList<>(blocklyToJava.getCompileNotes());
+        if (this.requiresPortApi() && !this.hasPortApi()) {
+            compileNotesArrayList.add(new BlocklyCompileNote(BlocklyCompileNote.Type.ERROR,
+                    L10N.t("blockly.errors.api_required", "forgeconfigapiport", "Configuration Files")));
+        }
         SwingUtilities.invokeLater(() -> {
             this.compileNotesPanel.updateCompileNotes(compileNotesArrayList);
             this.blocklyChangedListeners.forEach((listener) -> {
@@ -135,6 +137,26 @@ public class ConfigGUI extends ModElementGUI<Config> implements IBlocklyPanelHol
         });
 
         return compileNotesArrayList;
+    }
+
+    /**
+     * Checks whether the current generator needs the external Forge Config API Port API. Native Forge generators use
+     * the built-in configuration API and must not require the port.
+     *
+     * @return {@code true} for Fabric and NeoForge workspaces
+     */
+    private boolean requiresPortApi() {
+        GeneratorFlavor flavor = this.modElement.getGeneratorConfiguration().getGeneratorFlavor();
+        return flavor == GeneratorFlavor.FABRIC || flavor == GeneratorFlavor.NEOFORGE;
+    }
+
+    /**
+     * Checks whether the Forge Config API Port API is enabled for the current workspace.
+     *
+     * @return {@code true} when the workspace has the API enabled
+     */
+    private boolean hasPortApi() {
+        return this.mcreator.getWorkspace().getWorkspaceSettings().getMCreatorDependencies().contains("forgeconfigapiport");
     }
 
     public void addBlocklyChangedListener(BlocklyChangedListener blocklyChangedListener) {

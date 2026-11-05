@@ -1,6 +1,7 @@
 package ${package}.init;
 
 import fuzs.forgeconfigapiport.fabric.api.v5.ConfigRegistry;
+import ${package}.configuration.*;
 import net.fabricmc.api.ModInitializer;
 import net.neoforged.fml.config.ModConfig;
 

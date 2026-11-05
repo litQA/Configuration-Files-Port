@@ -1,7 +1,5 @@
 package com.litqa.forgeconfigapiport;
 
-import net.mcreator.blockly.IBlockGenerator;
-import net.mcreator.blockly.InternalBlocksLoader;
 import net.mcreator.blockly.data.BlocklyLoader;
 import net.mcreator.plugin.JavaPlugin;
 import net.mcreator.plugin.Plugin;
@@ -14,8 +12,6 @@ import com.litqa.forgeconfigapiport.element.types.PluginElementTypes;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import java.lang.reflect.Field;
-import java.util.List;
 import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -24,7 +20,8 @@ import java.util.regex.Pattern;
  * Plugin entry point.
  * <p>
  * Registers the configuration Blockly editor, the configuration mod element type and the Fabric mod metadata hook that
- * wires the generated configuration registry into the mod entrypoints.
+ * wires the generated configuration registry into the mod entrypoints. NeoForge workspaces discover the generated
+ * registry through the event bus annotation of the initializer template and need no mod metadata modification.
  */
 @SuppressWarnings("this-escape")
 public class Launcher extends JavaPlugin {
@@ -37,6 +34,8 @@ public class Launcher extends JavaPlugin {
 	private static final String FABRIC_MOD_JSON_TEMPLATE = "modbase/fabric.mod.json.ftl";
 	/** Suffix of the generated class that registers every configuration spec of the workspace. */
 	private static final String CONFIG_ENTRYPOINT_SUFFIX = "Configs";
+	/** Template of the generated dispense behavior initializer. */
+	private static final String DISPENSE_BEHAVIORS_TEMPLATE = "elementinits/dispensebehaviors.java.ftl";
 	/** Matches the main entrypoint array of a generated fabric.mod.json. */
 	private static final Pattern MAIN_ENTRYPOINT_ARRAY = Pattern.compile("\"main\"\\s*:\\s*\\[");
 
@@ -44,22 +43,15 @@ public class Launcher extends JavaPlugin {
 		super(plugin);
 
 		addListener(PreGeneratorsLoadingEvent.class, event -> {
-			try {
-				// Registers the configuration editor as a Blockly editor without internal blocks. The blocks
-				// themselves are supplied by the config resource folder of this plugin.
-				Field internalBlocksField = InternalBlocksLoader.class.getDeclaredField("internalBlocks");
-				internalBlocksField.setAccessible(true);
-				@SuppressWarnings("unchecked") Map<BlocklyEditorType, List<IBlockGenerator>> internalBlocks =
-						(Map<BlocklyEditorType, List<IBlockGenerator>>) internalBlocksField.get(null);
-				internalBlocks.put(CONFIG_EDITOR, List.of());
-			} catch (ReflectiveOperationException exception) {
-				LOG.warn("Could not register the configuration Blockly editor internal blocks", exception);
-			}
-			BlocklyLoader.INSTANCE.registerBlockLoader(CONFIG_EDITOR);
 			PluginElementTypes.load();
+			// The configuration blocks are supplied by the config resource folder of this plugin.
+			BlocklyLoader.INSTANCE.registerBlockLoader(CONFIG_EDITOR);
 		});
 
-		addListener(ModifyTemplateResultEvent.class, Launcher::addConfigurationEntrypoint);
+		addListener(ModifyTemplateResultEvent.class, event -> {
+			addConfigurationEntrypoint(event);
+			fixNeoForgeDispenseBehaviorBus(event);
+		});
 
 		LOG.info("Forge Config API Port configuration plugin was loaded");
 	}
@@ -89,6 +81,38 @@ public class Launcher extends JavaPlugin {
 
 		String entrypoint = packagePath + ".init." + modName + CONFIG_ENTRYPOINT_SUFFIX;
 		event.setTemplateOutput(addMainEntrypoint(event.getTemplateOutput(), entrypoint));
+	}
+
+	/**
+	 * Fixes the mod event bus annotation of the dispense behavior initializer on the NeoForge 1.20.4 and 1.20.6
+	 * generators.
+	 * <p>
+	 * The MCreator 2026.1 generator templates for these two versions annotate the generated class with a bus-less
+	 * {@code @EventBusSubscriber} / {@code @Mod.EventBusSubscriber}. The class subscribes to {@code FMLCommonSetupEvent},
+	 * which is a mod bus event, so NeoForge rejects it on the common bus and the client crashes during mod construction.
+	 * No other generator versions are modified; their default annotation already targets the mod bus.
+	 *
+	 * @param event template generation event
+	 */
+	private static void fixNeoForgeDispenseBehaviorBus(ModifyTemplateResultEvent event) {
+		if (!DISPENSE_BEHAVIORS_TEMPLATE.equals(event.getTemplateName()))
+			return;
+
+		if (!(event.getDataModel().get("w") instanceof WorkspaceInfo info))
+			return;
+
+		String generator = info.getWorkspace().getGenerator().getGeneratorName();
+		String output = event.getTemplateOutput();
+		if (output == null)
+			return;
+
+		if ("neoforge-1.20.4".equals(generator)) {
+			event.setTemplateOutput(output.replaceFirst("@Mod\\.EventBusSubscriber(\\s+)public class",
+					"@Mod.EventBusSubscriber(bus = Mod.EventBusSubscriber.Bus.MOD)$1public class"));
+		} else if ("neoforge-1.20.6".equals(generator)) {
+			event.setTemplateOutput(output.replaceFirst("@EventBusSubscriber(\\s+)public class",
+					"@EventBusSubscriber(bus = EventBusSubscriber.Bus.MOD)$1public class"));
+		}
 	}
 
 	/**
