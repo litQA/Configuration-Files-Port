@@ -1,5 +1,6 @@
 package ${package}.init;
 
+import ${package}.configuration.*;
 import fuzs.forgeconfigapiport.api.config.v2.ForgeConfigRegistry;
 import net.fabricmc.api.ModInitializer;
 import net.minecraftforge.fml.config.ModConfig;

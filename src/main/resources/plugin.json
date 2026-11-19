@@ -8,8 +8,8 @@
   ],
   "info": {
     "name": "Configuration Files (Forge Config API Port)",
-    "version": "1.0.4-beta",
-    "description": "Adds a configuration file element backed by Forge Config API Port for the Fabric generators. Element, field and template names are identical to the Configuration Files plugin it ports.",
+    "version": "2026.3-1.1.0-beta",
+    "description": "Adds a configuration file element backed by the native Forge config API on Forge and NeoForge 1.20.1, and by Forge Config API Port on the other NeoForge and Fabric generators. Supports Forge 1.16.5 to 26.3, NeoForge 1.20.1 to 26.3 and Fabric 1.20.1 to 26.3. Element, field and template names are identical to the Configuration Files plugin it ports.",
     "author": "LitQA",
     "credits": "Element definitions and user interface based on the Configuration Files plugin by NerdyPuzzle",
     "license": "CC BY-NC 4.0"

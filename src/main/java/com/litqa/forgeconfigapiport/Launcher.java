@@ -23,8 +23,9 @@ import java.util.regex.Pattern;
 /**
  * Plugin entry point.
  * <p>
- * Registers the configuration Blockly editor, the configuration mod element type and the Fabric mod metadata hook that
- * wires the generated configuration registry into the mod entrypoints.
+ * Registers the configuration Blockly editor, the configuration mod element type, the Fabric mod metadata hook that
+ * wires the generated configuration registry into the mod entrypoints and the NeoForge 1.20.4/1.20.6 dispense behavior
+ * event bus correction.
  */
 @SuppressWarnings("this-escape")
 public class Launcher extends JavaPlugin {
@@ -37,6 +38,8 @@ public class Launcher extends JavaPlugin {
 	private static final String FABRIC_MOD_JSON_TEMPLATE = "modbase/fabric.mod.json.ftl";
 	/** Suffix of the generated class that registers every configuration spec of the workspace. */
 	private static final String CONFIG_ENTRYPOINT_SUFFIX = "Configs";
+	/** Template of the generated dispense behavior initializer. */
+	private static final String DISPENSE_BEHAVIORS_TEMPLATE = "elementinits/dispensebehaviors.java.ftl";
 	/** Matches the main entrypoint array of a generated fabric.mod.json. */
 	private static final Pattern MAIN_ENTRYPOINT_ARRAY = Pattern.compile("\"main\"\\s*:\\s*\\[");
 
@@ -59,7 +62,10 @@ public class Launcher extends JavaPlugin {
 			PluginElementTypes.load();
 		});
 
-		addListener(ModifyTemplateResultEvent.class, Launcher::addConfigurationEntrypoint);
+		addListener(ModifyTemplateResultEvent.class, event -> {
+			addConfigurationEntrypoint(event);
+			fixNeoForgeDispenseBehaviorBus(event);
+		});
 
 		LOG.info("Forge Config API Port configuration plugin was loaded");
 	}
@@ -89,6 +95,39 @@ public class Launcher extends JavaPlugin {
 
 		String entrypoint = packagePath + ".init." + modName + CONFIG_ENTRYPOINT_SUFFIX;
 		event.setTemplateOutput(addMainEntrypoint(event.getTemplateOutput(), entrypoint));
+	}
+
+	/**
+	 * Fixes the mod event bus annotation of the dispense behavior initializer on the NeoForge 1.20.4 and 1.20.6
+	 * generators.
+	 * <p>
+	 * The generator templates for these two versions annotate the generated class with a bus-less
+	 * {@code @EventBusSubscriber} / {@code @Mod.EventBusSubscriber}. The class subscribes to {@code FMLCommonSetupEvent},
+	 * which is a mod bus event, so NeoForge rejects it on the common bus and the client crashes during mod construction.
+	 * No other generator versions are modified; their default annotation already targets the mod bus. The patterns only
+	 * match annotations that do not declare a bus yet, so the hook is idempotent and harmless on a fixed generator.
+	 *
+	 * @param event template generation event
+	 */
+	private static void fixNeoForgeDispenseBehaviorBus(ModifyTemplateResultEvent event) {
+		if (!DISPENSE_BEHAVIORS_TEMPLATE.equals(event.getTemplateName()))
+			return;
+
+		if (!(event.getDataModel().get("w") instanceof WorkspaceInfo info))
+			return;
+
+		String generator = info.getWorkspace().getGenerator().getGeneratorName();
+		String output = event.getTemplateOutput();
+		if (output == null)
+			return;
+
+		if ("neoforge-1.20.4".equals(generator)) {
+			event.setTemplateOutput(output.replaceFirst("@Mod\\.EventBusSubscriber(\\s+)public class",
+					"@Mod.EventBusSubscriber(bus = Mod.EventBusSubscriber.Bus.MOD)$1public class"));
+		} else if ("neoforge-1.20.6".equals(generator)) {
+			event.setTemplateOutput(output.replaceFirst("@EventBusSubscriber(\\s+)public class",
+					"@EventBusSubscriber(bus = EventBusSubscriber.Bus.MOD)$1public class"));
+		}
 	}
 
 	/**

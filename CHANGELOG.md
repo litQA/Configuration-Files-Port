@@ -2,6 +2,51 @@
 
 All notable changes to this project are documented in this file. Versions are listed newest first.
 
+# 2026.3-1.1.0-beta
+
+## New Content
+
+- Forge generator support for `forge-1.16.5`, `forge-1.17.1`, `forge-1.18.2`, `forge-1.19.2`, `forge-1.19.4`,
+  `forge-1.20.1`, `forge-1.20.4`, `forge-1.21.1`, `forge-26.1.2` and `forge-26.3`. These generators use the native
+  Forge configuration API and register their specs through `ModLoadingContext`.
+- NeoForge generator support for `neoforge-1.20.1`, `neoforge-1.20.4`, `neoforge-1.20.6`, `neoforge-1.21.1`,
+  `neoforge-1.21.4`, `neoforge-1.21.8`, `neoforge-26.1.2`, `neoforge-26.2` and `neoforge-26.3`. The 1.20.1 generator
+  uses the native Forge compatible API; the other versions use Forge Config API Port.
+- Fabric generator support for `fabric-26.2` in addition to `fabric-1.20.1`, `fabric-1.21.1`, `fabric-1.21.8`,
+  `fabric-1.21.11`, `fabric-26.1.2` and `fabric-26.3`.
+- The ModAPI definition carries compatibility markers for every native Forge generator and for NeoForge 1.20.1, so a
+  workspace can switch between native and port based generators without a missing API error.
+
+## Changes
+
+- The `config` element type is covered by the Forge, NeoForge and Fabric generator flavors instead of the Fabric
+  flavor only.
+- The configuration editor reports the missing `forgeconfigapiport` external API on Fabric and port based NeoForge
+  workspaces, but not on native Forge or NeoForge 1.20.1 workspaces, where the loader supplies the configuration API.
+- Forge 26.x initializers import `net.minecraftforge.eventbus.api.listener.SubscribeEvent`; Forge 1.16.5 to 1.21.1
+  keep the older `net.minecraftforge.eventbus.api.SubscribeEvent` import.
+- Fabric initializers import the generated configuration package explicitly and NeoForge 1.20.4/1.20.6 keep their
+  dispense behavior event bus correction.
+- Version number, plugin descriptor, README, changelog and the documented generator matrix are aligned to
+  `2026.3-1.1.0-beta`.
+
+## Fixes
+
+Fixed 2 bug(s).
+
+- The Fabric configuration initializer referenced the generated configuration class without importing the
+  `configuration` package. The explicit wildcard import keeps the generated file compilable even when MCreator's import
+  formatter cannot resolve the generated class yet.
+- The NeoForge 1.20.4 and 1.20.6 `DispenseBehaviors` initializer is corrected to subscribe on the mod event bus, which
+  prevents the client crash reported with the bus-less annotation.
+
+## Known Limitations
+
+- Forge 26.x still exposes `ModLoadingContext`, but Forge marks it deprecated for removal. The native templates use it
+  so one initializer shape works from 1.16.5 through 26.3.
+- Third party generator plugins for Minecraft versions that MCreator does not bundle are not distributed with this
+  plugin and have to be installed separately.
+
 # 1.0.6-beta
 
 ## Changes

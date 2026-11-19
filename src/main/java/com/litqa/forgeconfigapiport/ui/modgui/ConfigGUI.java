@@ -8,6 +8,7 @@ import net.mcreator.blockly.data.ToolboxBlock;
 import net.mcreator.blockly.data.ToolboxType;
 import net.mcreator.blockly.java.BlocklyToJava;
 import net.mcreator.element.util.AnnotationUtils;
+import net.mcreator.generator.GeneratorFlavor;
 import net.mcreator.generator.blockly.BlocklyBlockCodeGenerator;
 import net.mcreator.generator.blockly.OutputBlockCodeGenerator;
 import net.mcreator.generator.blockly.ProceduralBlockCodeGenerator;
@@ -126,7 +127,11 @@ public class ConfigGUI extends ModElementGUI<Config> implements IBlocklyPanelHol
             return List.of();
         }
 
-        List<BlocklyCompileNote> compileNotesArrayList = blocklyToJava.getCompileNotes();
+        List<BlocklyCompileNote> compileNotesArrayList = new ArrayList<>(blocklyToJava.getCompileNotes());
+        if (this.requiresPortApi() && !this.hasPortApi()) {
+            compileNotesArrayList.add(new BlocklyCompileNote(BlocklyCompileNote.Type.ERROR,
+                    L10N.t("blockly.errors.api_required", "forgeconfigapiport", "Configuration Files")));
+        }
         SwingUtilities.invokeLater(() -> {
             this.compileNotesPanel.updateCompileNotes(compileNotesArrayList);
             this.blocklyChangedListeners.forEach((listener) -> {
@@ -135,6 +140,33 @@ public class ConfigGUI extends ModElementGUI<Config> implements IBlocklyPanelHol
         });
 
         return compileNotesArrayList;
+    }
+
+    /**
+     * Checks whether the current generator needs the external Forge Config API Port API.
+     * <p>
+     * Native Forge generators and the NeoForge 1.20.1 generator use the Forge compatible configuration API that ships
+     * with the loader, so they must not require the port. Every other NeoForge generator and every Fabric generator
+     * generates code against the port.
+     *
+     * @return {@code true} when the workspace has to enable the port API
+     */
+    private boolean requiresPortApi() {
+        GeneratorFlavor flavor = this.modElement.getGeneratorConfiguration().getGeneratorFlavor();
+        if (flavor == GeneratorFlavor.FABRIC)
+            return true;
+        if (flavor == GeneratorFlavor.NEOFORGE)
+            return !"neoforge-1.20.1".equals(this.modElement.getGenerator().getGeneratorName());
+        return false;
+    }
+
+    /**
+     * Checks whether the Forge Config API Port API is enabled for the current workspace.
+     *
+     * @return {@code true} when the workspace has the API enabled
+     */
+    private boolean hasPortApi() {
+        return this.mcreator.getWorkspace().getWorkspaceSettings().getMCreatorDependencies().contains("forgeconfigapiport");
     }
 
     public void addBlocklyChangedListener(BlocklyChangedListener blocklyChangedListener) {
