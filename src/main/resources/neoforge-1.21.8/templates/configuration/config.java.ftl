@@ -1,12 +1,13 @@
 package ${package}.configuration;
 
-import net.minecraftforge.common.ForgeConfigSpec;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.neoforged.neoforge.common.ModConfigSpec;
 
 import java.util.List;
 
 public class ${name}Configuration {
-	public static final ForgeConfigSpec.Builder BUILDER = new ForgeConfigSpec.Builder();
-	public static final ForgeConfigSpec SPEC;
+	public static final ModConfigSpec.Builder BUILDER = new ModConfigSpec.Builder();
+	public static final ModConfigSpec SPEC;
 
 	${variables}
 

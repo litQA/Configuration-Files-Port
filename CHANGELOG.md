@@ -2,6 +2,42 @@
 
 All notable changes to this branch are documented in this file. Versions are listed newest first.
 
+# 2026.1-2.2.1-beta
+
+## New Content
+
+- NeoForge `1.20.1` generator definition, configuration templates and registration templates. The generator is based on
+  the MCreator 2026.1 Forge 1.20.1 generator and uses the legacy `ForgeConfigSpec`, `ModLoadingContext` and
+  `@Mod.EventBusSubscriber` shape of that generator.
+- Native NeoForge `1.20.4`, `1.20.6`, `1.21.1`, `1.21.4` and `1.21.8` configuration templates using
+  `net.neoforged.neoforge.common.ModConfigSpec`.
+- Empty `forgeconfigapiport` API compatibility markers for `neoforge-1.20.1`, `neoforge-1.20.4`,
+  `neoforge-1.20.6`, `neoforge-1.21.1`, `neoforge-1.21.4` and `neoforge-1.21.8`.
+
+## Changes
+
+- Version identifier is `2026.1-2.2.1-beta`: the build component is restored and the major component is incremented
+  once from the previous branch line.
+- NeoForge 1.20.4 and newer no longer depend on Forge Config API Port. Configuration specs are registered with
+  `ModContainer#registerConfig(ModConfig.Type, IConfigSpec, String)` from `ModList#getModContainerById`.
+- NeoForge event bus annotations now match each generator: nested `@Mod.EventBusSubscriber(bus = MOD)` for 1.20.4,
+  `@EventBusSubscriber(bus = MOD)` for 1.20.6 and plain `@EventBusSubscriber` for 1.21.1, 1.21.4 and 1.21.8.
+- The configuration editor shows the `api_required` note only for Fabric workspaces. Native Forge and NeoForge
+  workspaces do not require an external configuration API.
+- The plugin now supports thirteen generators: six native Forge, six native NeoForge and Fabric 1.21.8 through the Port.
+- `README.md` documents the native NeoForge registration shape, the NeoForge 1.20.1 legacy exception, the dependency
+  matrix and the conversion markers.
+
+## Known Limitations
+
+- NeoForge 1.20.1 keeps the legacy `ForgeConfigSpec` API because its MCreator generator is based on Forge 1.20.1. It is
+  native NeoForge configuration and needs no Port, but it does not use `ModConfigSpec`.
+- A workspace that keeps the `forgeconfigapiport` compatibility marker enabled after converting to Forge or NeoForge
+  may retain an optional `forgeconfigapiport` entry in its platform metadata. It adds no dependency and has no build
+  or runtime effect.
+- No configuration screen is registered.
+- Configuration variables must be referenced in procedure blocks by their identifier name, not their display name.
+
 # 2026.1-1.1.1-beta
 
 ## Fixes

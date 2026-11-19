@@ -140,14 +140,14 @@ public class ConfigGUI extends ModElementGUI<Config> implements IBlocklyPanelHol
     }
 
     /**
-     * Checks whether the current generator needs the external Forge Config API Port API. Native Forge generators use
-     * the built-in configuration API and must not require the port.
+     * Checks whether the current generator needs the external Forge Config API Port API. Forge and NeoForge
+     * generators use their built-in configuration API and must not require the port.
      *
-     * @return {@code true} for Fabric and NeoForge workspaces
+     * @return {@code true} for Fabric workspaces only
      */
     private boolean requiresPortApi() {
         GeneratorFlavor flavor = this.modElement.getGeneratorConfiguration().getGeneratorFlavor();
-        return flavor == GeneratorFlavor.FABRIC || flavor == GeneratorFlavor.NEOFORGE;
+        return flavor == GeneratorFlavor.FABRIC;
     }
 
     /**

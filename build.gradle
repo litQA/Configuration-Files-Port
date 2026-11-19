@@ -3,9 +3,9 @@ plugins {
 }
 
 group = 'com.litqa.forgeconfigapiport'
-version = '2026.1-1.1.1-beta'
+version = '2026.1-2.2.1-beta'
 
-description = 'Configuration Files (Forge Config API Port) - MCreator 2026.1 plugin'
+description = 'Configuration Files (Forge / NeoForge / Fabric) - MCreator 2026.1 plugin'
 
 java {
     toolchain {
