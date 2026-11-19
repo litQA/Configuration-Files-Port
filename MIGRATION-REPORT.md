@@ -2,65 +2,80 @@
 
 ## Scope
 
-This report covers the migration of the Configuration Files mod element to MCreator 2026.3 and the changes needed to
-support the Forge, NeoForge and Fabric generators of that release.
+This branch replaces the previous `plugin/` development copy. It targets MCreator 2026.3 EAP and the following
+generators:
 
-## Workspace Migration
+| Loader | Generators |
+| --- | --- |
+| Forge | `forge-1.12.2`, `forge-1.20.1`, `forge-1.20.4`, `forge-1.21.1`, `forge-26.3` |
+| NeoForge | `neoforge-1.21.1`, `neoforge-1.21.4`, `neoforge-1.21.8`, `neoforge-26.1.2`, `neoforge-26.2`, `neoforge-26.3` |
+| Fabric | `fabric-1.20.1`, `fabric-1.21.1`, `fabric-1.21.8`, `fabric-1.21.11`, `fabric-26.1.2`, `fabric-26.2`, `fabric-26.3` |
 
-1. Remove or disable the original `configuration_files.zip` plugin and any older `forge-config-api` package. Both the
-   original plugin and this plugin register the `config` element type and the `config` Blockly editor; MCreator cannot
-   load both at the same time.
-2. Install `forge-config-api-port.zip` version `2026.3-1.1.0-beta` or newer and restart MCreator.
-3. Switch the workspace to the target generator before editing the external API selection. The element is only offered
-   on generator versions that contain the matching `config.definition.yaml`.
-4. On Fabric and on NeoForge generators other than 1.20.1, enable **Workspace settings → External APIs → Forge Config
-   API Port**. Native Forge and NeoForge 1.20.1 workspaces do not need the external API because the loader supplies the
-   configuration API.
-5. Run **Regenerate code** and rebuild the workspace. Template changes are only applied while MCreator generates code;
-   an existing build directory keeps the old generated classes otherwise.
+The source is self-contained under `plugin-branch-2026.3/`. The previous `plugin/` directory is deprecated and is not
+part of this migration.
 
-Existing `Pools` based workspaces are read through `Config.listsToXML()` and saved in the current Blockly format on the
-next edit. Element names, block ids, field names, data list entries, mappings and generated class names are unchanged.
+## Native configuration APIs
 
-## Architecture Differences
+Forge and NeoForge no longer use Forge Config API Port as a prerequisite.
 
-| Platform group | Configuration API | Spec registration |
-| --- | --- | --- |
-| Forge 1.16.5–26.3, NeoForge 1.20.1 | native `net.minecraftforge.common.ForgeConfigSpec` | `ModLoadingContext.get().registerConfig(...)` |
-| NeoForge 1.20.4–1.21.4 | Forge Config API Port forge v4 registry | `ForgeConfigRegistry.INSTANCE.register(...)` |
-| NeoForge 1.21.8, 26.1.2, 26.2, 26.3 | Forge Config API Port v5 registry | `ForgeConfigRegistry.INSTANCE.register(...)` |
-| Fabric 1.20.1 | Forge Config API Port v2 registry | `ForgeConfigRegistry.INSTANCE.register(...)` |
-| Fabric 1.21.1 | Forge Config API Port forge v4 registry | `ForgeConfigRegistry.INSTANCE.register(...)` |
-| Fabric 1.21.8, 1.21.11, 26.1.2, 26.2, 26.3 | Forge Config API Port v5 registry | `ConfigRegistry.INSTANCE.register(...)` |
+* Forge 1.20.1/1.20.4/1.21.1/26.3 use `net.minecraftforge.common.ForgeConfigSpec` and register through
+  `ModLoadingContext#registerConfig`.
+* NeoForge 1.21.1/1.21.4/1.21.8/26.1.2/26.2 use `net.neoforged.neoforge.common.ModConfigSpec` and register through
+  `ModContainer#registerConfig` with `COMMON`, `SERVER` and `CLIENT`.
+* NeoForge 26.3 uses the same `ModConfigSpec` API with `LOCAL`, `SYNCED` and `CLIENT`.
+* Forge 1.12.2 uses the legacy `net.minecraftforge.common.config.Configuration` API, `Property` fields and one
+  `config/<file>.cfg` file per element, loaded during `FMLPreInitializationEvent`.
 
-The Forge 26.x event bus moved `SubscribeEvent` to `net.minecraftforge.eventbus.api.listener`. Forge 1.16.5–1.21.1
-keeps the older `net.minecraftforge.eventbus.api.SubscribeEvent` import. NeoForge 26.x keeps
-`net.neoforged.bus.api.SubscribeEvent`.
+The `apis/forgeconfigapiport.yaml` file now contains only empty compatibility markers. It does not add Gradle
+dependencies or expose the Fabric implementation through the workspace external API list.
 
-## Known Limitations
+## Fabric dependency injection
 
-- **No configuration screen.** The original plugin opened the NeoForge `ConfigurationScreen`. Forge Config API Port
-  exposes `ConfigScreenFactoryRegistry`, but this plugin does not register a screen yet; values are edited in the
-  generated `.toml` file while the game is not running.
-- **Port API is enabled per workspace.** Once `forgeconfigapiport` is enabled, the ModAPI definition applies to the
-  whole workspace, including mods without configuration elements. The generated mod metadata may declare the port as a
-  runtime dependency in that case.
-- **Native Forge compatibility marker.** Forge 1.16.5–26.3 and NeoForge 1.20.1 use an empty ModAPI implementation. If
-  the marker remains enabled after a generator switch, Forge metadata may contain an optional `forgeconfigapiport`
-  entry. It does not make the port a required Forge dependency and does not change the build.
-- **Forge 26.x registration API.** Forge 26.x still exposes `ModLoadingContext`, but it is marked deprecated for
-  removal. The native Forge initializer uses `ModLoadingContext.get().registerConfig(...)` so the same template works
-  from 1.16.5 through 26.3. A future Forge release that removes the method requires switching to the constructor
-  context form.
-- **Third party generators.** MCreator 2026.3 does not bundle every generator listed in the support matrix. The Forge
-  generators, NeoForge 1.20.1/1.20.4/1.20.6/1.21.4/26.1.2/26.2 and Fabric 26.2 are supplied by separate generator
-  plugins by their respective authors; they are not distributed with this plugin.
-- **Fabric 1.20.1 metadata.** The Fabric 1.20.1 mod metadata template does not emit dynamically required mods. The
-  workspace receives the Gradle dependency but no `depends` entry for the port in `fabric.mod.json`.
-- **Network on first build.** The port based workspaces resolve Forge Config API Port from the Modrinth Maven repository
-  on the first build, so that build needs network access.
-- **Pinned coordinates.** The port coordinates in `apis/forgeconfigapiport.yaml` are pinned to published releases.
-  Updating a generator to a newer port release requires editing the definition.
-- **No in-game verification for every generator.** The plugin sources, resources and rendered templates are verified
-  locally; the generated workspace build and in-game launch have to be checked per installed generator plugin on the
-  target MCreator installation.
+Fabric workspaces still use Forge Config API Port. The plugin owns a marked block in the generated `build.gradle`:
+
+* The block adds the Modrinth Maven repository, `mavenCentral()` and the matching `modImplementation` or
+  `implementation` dependency for the active Fabric generator.
+* Fabric 1.21.1 and newer also receive the matching Night Config `core` and `toml` artifacts.
+* The block is rewritten at the start of every Gradle build and is removed when the workspace is not a Fabric workspace
+  or has no configuration elements.
+* The legacy `forgeconfigapiport` entry is removed from `WorkspaceSettings#getMCreatorDependenciesRaw()` when a
+  workspace is loaded or built.
+
+No external API has to be enabled manually. Existing workspaces that enabled the old API are cleaned automatically.
+
+## Removed generator resources
+
+The following generator resource directories were removed because they are outside the new support scope:
+
+* Forge: `forge-1.16.5`, `forge-1.17.1`, `forge-1.18.2`, `forge-1.19.2`, `forge-1.19.4`, `forge-26.1.2`.
+* NeoForge: `neoforge-1.20.1`, `neoforge-1.20.4`, `neoforge-1.20.6`.
+
+`forge-1.12.2` was added with its own legacy configuration templates.
+
+## Compatibility
+
+* The `config` mod element type, Blockly editor, block ids, field names, data list and language keys are unchanged.
+  Existing workspaces do not require a data migration.
+* The generated class names and package layout are unchanged.
+* The plugin package version is `1.1.1.1-beta` and the archive name is `forge-config-api-2026.3.zip`.
+* The Gradle wrapper uses the public Gradle 9.8.0 distribution URL with distribution URL validation enabled.
+* The plugin descriptor still accepts MCreator `202600344621` and `2026003`.
+
+## Verification
+
+* Plugin Java sources compile with Java 25 and `-Xlint:all` without errors or warnings.
+* The plugin resource validator reports no failures.
+* The API definition contains eighteen compatibility markers and no real Gradle dependency blocks.
+* All eighteen generator template sets render and compile against local API stubs, including the Forge 1.12.2 legacy
+  API and the NeoForge 26.3 `LOCAL`/`SYNCED` registration types.
+* The Gradle package build and archive inspection are part of the release check.
+
+## Known limitations
+
+* Forge 1.12.2 has no `COMMON`/`SERVER`/`CLIENT` split. The configuration type is ignored and each element uses its own
+  `.cfg` file.
+* No configuration screen is registered.
+* Fabric 1.20.1 mod metadata does not emit a dynamic `depends` entry for Forge Config API Port.
+* Fabric workspaces need network access on the first build for the Modrinth Maven dependency.
+* Third-party generator plugins are required for generators that MCreator 2026.3 does not bundle.
+* Generated workspace builds and in-game behavior must be checked per installed generator plugin.

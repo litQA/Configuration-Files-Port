@@ -3,7 +3,7 @@ plugins {
 }
 
 group = 'com.litqa.forgeconfigapiport'
-version = '2026.3-1.1.0-beta'
+version = '1.1.1.1-beta'
 
 description = 'Configuration Files (Forge Config API Port) - MCreator plugin'
 
@@ -31,7 +31,7 @@ tasks.withType(JavaCompile).configureEach {
 // plugin classes and every resource (Blockly definitions, templates, mappings, language files and themes) at the
 // archive root, exactly like a manual plugin installation package.
 jar {
-    archiveFileName = 'forge-config-api-port.zip'
+    archiveFileName = 'forge-config-api-2026.3.zip'
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
     exclude 'META-INF/*.SF', 'META-INF/*.DSA', 'META-INF/*.RSA'
 }

@@ -1,31 +1,42 @@
 package com.litqa.forgeconfigapiport;
 
+import com.litqa.forgeconfigapiport.element.types.PluginElementTypes;
 import net.mcreator.blockly.IBlockGenerator;
 import net.mcreator.blockly.InternalBlocksLoader;
 import net.mcreator.blockly.data.BlocklyLoader;
+import net.mcreator.generator.GeneratorFlavor;
 import net.mcreator.plugin.JavaPlugin;
 import net.mcreator.plugin.Plugin;
 import net.mcreator.plugin.events.ModifyTemplateResultEvent;
 import net.mcreator.plugin.events.PreGeneratorsLoadingEvent;
+import net.mcreator.plugin.events.workspace.MCreatorLoadedEvent;
+import net.mcreator.plugin.events.workspace.WorkspaceBuildStartedEvent;
 import net.mcreator.ui.blockly.BlocklyEditorType;
+import net.mcreator.workspace.Workspace;
 import net.mcreator.workspace.misc.WorkspaceInfo;
-import com.litqa.forgeconfigapiport.element.types.PluginElementTypes;
+import net.mcreator.workspace.settings.WorkspaceSettings;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import java.io.File;
+import java.io.IOException;
 import java.lang.reflect.Field;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
  * Plugin entry point.
  * <p>
- * Registers the configuration Blockly editor, the configuration mod element type, the Fabric mod metadata hook that
- * wires the generated configuration registry into the mod entrypoints and the NeoForge 1.20.4/1.20.6 dispense behavior
- * event bus correction.
+ * Registers the configuration Blockly editor and the configuration mod element type, wires the Fabric mod metadata
+ * entrypoint and keeps the Fabric Forge Config API Port dependency in a managed {@code build.gradle} block. Forge and
+ * NeoForge use the native configuration API of their loader and do not need a Gradle injection.
  */
 @SuppressWarnings("this-escape")
 public class Launcher extends JavaPlugin {
@@ -38,10 +49,23 @@ public class Launcher extends JavaPlugin {
 	private static final String FABRIC_MOD_JSON_TEMPLATE = "modbase/fabric.mod.json.ftl";
 	/** Suffix of the generated class that registers every configuration spec of the workspace. */
 	private static final String CONFIG_ENTRYPOINT_SUFFIX = "Configs";
-	/** Template of the generated dispense behavior initializer. */
-	private static final String DISPENSE_BEHAVIORS_TEMPLATE = "elementinits/dispensebehaviors.java.ftl";
+	/** Legacy API id written by older releases of this plugin. */
+	private static final String LEGACY_API_ID = "forgeconfigapiport";
+	/** Markers of the dependency block that this plugin owns in the generated build script. */
+	private static final String MANAGED_BLOCK_START = "// >>> forge_config_api managed block >>>";
+	private static final String MANAGED_BLOCK_END = "// <<< forge_config_api managed block <<<";
 	/** Matches the main entrypoint array of a generated fabric.mod.json. */
 	private static final Pattern MAIN_ENTRYPOINT_ARRAY = Pattern.compile("\"main\"\\s*:\\s*\\[");
+
+	/** Fabric Forge Config API Port coordinates and the Gradle configuration that each generator expects. */
+	private static final Map<String, FabricDependency> FABRIC_DEPENDENCIES = Map.ofEntries(
+			Map.entry("fabric-1.20.1", new FabricDependency("v8.0.3-1.20.1-Fabric", "modImplementation", null)),
+			Map.entry("fabric-1.21.1", new FabricDependency("v21.1.6-1.21.1-Fabric", "modImplementation", "3.8.0")),
+			Map.entry("fabric-1.21.8", new FabricDependency("v21.8.2-1.21.8-Fabric", "modImplementation", "3.8.3")),
+			Map.entry("fabric-1.21.11", new FabricDependency("uXrWPsCu", "modImplementation", "3.8.4")),
+			Map.entry("fabric-26.1.2", new FabricDependency("jUe0ucoE", "implementation", "3.8.3")),
+			Map.entry("fabric-26.2", new FabricDependency("rSd3GiG8", "implementation", "3.8.4")),
+			Map.entry("fabric-26.3", new FabricDependency("JpKvrr9J", "implementation", "3.8.4")));
 
 	public Launcher(Plugin plugin) {
 		super(plugin);
@@ -62,20 +86,23 @@ public class Launcher extends JavaPlugin {
 			PluginElementTypes.load();
 		});
 
-		addListener(ModifyTemplateResultEvent.class, event -> {
-			addConfigurationEntrypoint(event);
-			fixNeoForgeDispenseBehaviorBus(event);
+		addListener(ModifyTemplateResultEvent.class, Launcher::addConfigurationEntrypoint);
+		addListener(MCreatorLoadedEvent.class, event -> {
+			Workspace workspace = event.getMCreator().getWorkspace();
+			if (workspace != null)
+				removeLegacyApi(workspace);
 		});
+		addListener(WorkspaceBuildStartedEvent.class, Launcher::updateFabricDependencies);
 
-		LOG.info("Forge Config API Port configuration plugin was loaded");
+		LOG.info("Configuration Files plugin was loaded");
 	}
 
 	/**
 	 * Adds the generated configuration registry as an additional mod entrypoint.
 	 * <p>
 	 * Forge Config API Port requires configuration specs to be registered while the mod is initialized. The entrypoint
-	 * is only added for workspaces that contain at least one configuration element, so workspaces that do not use this
-	 * plugin keep their mod metadata untouched.
+	 * is only added for Fabric workspaces that contain at least one configuration element, so workspaces that do not use
+	 * this plugin keep their mod metadata untouched.
 	 *
 	 * @param event template generation event, only the Fabric mod metadata template is handled
 	 */
@@ -98,36 +125,117 @@ public class Launcher extends JavaPlugin {
 	}
 
 	/**
-	 * Fixes the mod event bus annotation of the dispense behavior initializer on the NeoForge 1.20.4 and 1.20.6
-	 * generators.
+	 * Keeps the Forge Config API Port dependency in a managed block of the generated Fabric build script.
 	 * <p>
-	 * The generator templates for these two versions annotate the generated class with a bus-less
-	 * {@code @EventBusSubscriber} / {@code @Mod.EventBusSubscriber}. The class subscribes to {@code FMLCommonSetupEvent},
-	 * which is a mod bus event, so NeoForge rejects it on the common bus and the client crashes during mod construction.
-	 * No other generator versions are modified; their default annotation already targets the mod bus. The patterns only
-	 * match annotations that do not declare a bus yet, so the hook is idempotent and harmless on a fixed generator.
+	 * The Gradle integration of MCreator regenerates the workspace build script before this event fires and starts
+	 * the Gradle build after it. Rewriting the script here makes the dependency independent of the workspace external
+	 * API list, which is reserved for user selectable integrations. The block is removed for non Fabric workspaces and
+	 * for Fabric workspaces without configuration elements.
 	 *
-	 * @param event template generation event
+	 * @param event workspace build event fired after base generation and before Gradle starts
 	 */
-	private static void fixNeoForgeDispenseBehaviorBus(ModifyTemplateResultEvent event) {
-		if (!DISPENSE_BEHAVIORS_TEMPLATE.equals(event.getTemplateName()))
+	private static void updateFabricDependencies(WorkspaceBuildStartedEvent event) {
+		Workspace workspace = event.getMCreator().getWorkspace();
+		removeLegacyApi(workspace);
+
+		File buildGradle = new File(workspace.getFolderManager().getWorkspaceFolder(), "build.gradle");
+		if (!buildGradle.isFile())
 			return;
 
-		if (!(event.getDataModel().get("w") instanceof WorkspaceInfo info))
-			return;
+		try {
+			String original = Files.readString(buildGradle.toPath(), StandardCharsets.UTF_8);
+			String stripped = stripManagedBlock(original);
+			String updated = stripped;
 
-		String generator = info.getWorkspace().getGenerator().getGeneratorName();
-		String output = event.getTemplateOutput();
-		if (output == null)
-			return;
+			if (workspace.getGeneratorConfiguration().getGeneratorFlavor() == GeneratorFlavor.FABRIC
+					&& workspace.getWorkspaceInfo().hasElementsOfType(CONFIG_ELEMENT_TYPE)) {
+				String generatorName = workspace.getGenerator().getGeneratorName();
+				FabricDependency dependency = FABRIC_DEPENDENCIES.get(generatorName);
+				if (dependency == null) {
+					LOG.warn("No Forge Config API Port dependency is defined for Fabric generator {}", generatorName);
+				} else {
+					updated = appendManagedBlock(stripped, dependency);
+				}
+			}
 
-		if ("neoforge-1.20.4".equals(generator)) {
-			event.setTemplateOutput(output.replaceFirst("@Mod\\.EventBusSubscriber(\\s+)public class",
-					"@Mod.EventBusSubscriber(bus = Mod.EventBusSubscriber.Bus.MOD)$1public class"));
-		} else if ("neoforge-1.20.6".equals(generator)) {
-			event.setTemplateOutput(output.replaceFirst("@EventBusSubscriber(\\s+)public class",
-					"@EventBusSubscriber(bus = EventBusSubscriber.Bus.MOD)$1public class"));
+			if (!updated.equals(original))
+				Files.writeString(buildGradle.toPath(), updated, StandardCharsets.UTF_8);
+		} catch (IOException exception) {
+			LOG.warn("Could not update the Fabric dependency block in {}", buildGradle, exception);
 		}
+	}
+
+	/**
+	 * Removes the external API id that older plugin releases wrote into the workspace settings.
+	 *
+	 * @param workspace workspace whose dependency list is cleaned
+	 */
+	private static void removeLegacyApi(Workspace workspace) {
+		WorkspaceSettings settings = workspace.getWorkspaceSettings();
+		Set<String> dependencies = new HashSet<>(settings.getMCreatorDependenciesRaw());
+		if (dependencies.remove(LEGACY_API_ID)) {
+			settings.setMCreatorDependencies(dependencies);
+			workspace.markDirty();
+			LOG.info("Removed legacy {} workspace dependency", LEGACY_API_ID);
+		}
+	}
+
+	/**
+	 * Builds the managed dependency block for one Fabric generator.
+	 *
+	 * @param content    current build script without a managed block
+	 * @param dependency port coordinates and Gradle configuration of the generator
+	 * @return build script with the managed block appended
+	 */
+	private static String appendManagedBlock(String content, FabricDependency dependency) {
+		StringBuilder block = new StringBuilder();
+		block.append(MANAGED_BLOCK_START).append('\n');
+		block.append("// This block is rewritten by the Configuration Files plugin on every build.\n");
+		block.append("repositories {\n");
+		block.append("    mavenCentral()\n");
+		block.append("    maven {\n");
+		block.append("        name = 'Modrinth'\n");
+		block.append("        url = 'https://api.modrinth.com/maven'\n");
+		block.append("    }\n");
+		block.append("}\n\n");
+		block.append("dependencies {\n");
+		block.append("    ").append(dependency.configuration())
+				.append(" 'maven.modrinth:forge-config-api-port:").append(dependency.coordinate()).append("'\n");
+		if (dependency.nightConfigVersion() != null) {
+			block.append("    implementation 'com.electronwill.night-config:core:")
+					.append(dependency.nightConfigVersion()).append("'\n");
+			block.append("    implementation 'com.electronwill.night-config:toml:")
+					.append(dependency.nightConfigVersion()).append("'\n");
+		}
+		block.append("}\n");
+		block.append(MANAGED_BLOCK_END).append('\n');
+
+		String base = content.stripTrailing();
+		return base.isEmpty() ? block.toString() : base + "\n\n" + block;
+	}
+
+	/**
+	 * Removes a previously written managed dependency block.
+	 *
+	 * @param content current build script
+	 * @return build script without the managed block
+	 */
+	private static String stripManagedBlock(String content) {
+		int start = content.indexOf(MANAGED_BLOCK_START);
+		if (start < 0)
+			return content;
+
+		int end = content.indexOf(MANAGED_BLOCK_END, start);
+		if (end < 0)
+			return content.substring(0, start).stripTrailing();
+
+		String before = content.substring(0, start).stripTrailing();
+		String after = content.substring(end + MANAGED_BLOCK_END.length()).stripLeading();
+		if (before.isEmpty())
+			return after;
+		if (after.isEmpty())
+			return before;
+		return before + "\n\n" + after;
 	}
 
 	/**
@@ -193,5 +301,15 @@ public class Launcher extends JavaPlugin {
 			}
 		}
 		return -1;
+	}
+
+	/**
+	 * Forge Config API Port dependency of one Fabric generator.
+	 *
+	 * @param coordinate          Modrinth Maven version
+	 * @param configuration       Gradle dependency configuration
+	 * @param nightConfigVersion  Night Config version, or {@code null} when the port bundles the library
+	 */
+	private record FabricDependency(String coordinate, String configuration, String nightConfigVersion) {
 	}
 }

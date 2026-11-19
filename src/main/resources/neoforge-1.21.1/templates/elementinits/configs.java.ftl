@@ -1,9 +1,10 @@
 package ${package}.init;
 
-import fuzs.forgeconfigapiport.neoforge.api.forge.v4.ForgeConfigRegistry;
 import ${package}.configuration.*;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.ModContainer;
+import net.neoforged.fml.ModList;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.fml.config.ModConfig;
 import net.neoforged.fml.event.lifecycle.FMLConstructModEvent;
@@ -19,8 +20,9 @@ public class ${JavaModName}Configs {
 		@SubscribeEvent
 		public static void register(FMLConstructModEvent event) {
 			event.enqueueWork(() -> {
+				ModContainer container = ModList.get().getModContainerById("${modid}").get();
 				<#list commonConfigs as config>
-				ForgeConfigRegistry.INSTANCE.register("${modid}", ModConfig.Type.<#if config.configType == 0>COMMON<#else>SERVER</#if>, ${config.getModElement().getName()}Configuration.SPEC, "${config.file}.toml");
+				container.registerConfig(ModConfig.Type.<#if config.configType == 0>COMMON<#else>SERVER</#if>, ${config.getModElement().getName()}Configuration.SPEC, "${config.file}.toml");
 				</#list>
 			});
 		}
@@ -28,13 +30,14 @@ public class ${JavaModName}Configs {
 </#if>
 
 <#if clientConfigs?has_content>
-	@EventBusSubscriber(Dist.CLIENT)
+	@EventBusSubscriber(value = Dist.CLIENT)
 	public static class ClientRegistry {
 		@SubscribeEvent
 		public static void register(FMLConstructModEvent event) {
 			event.enqueueWork(() -> {
+				ModContainer container = ModList.get().getModContainerById("${modid}").get();
 				<#list clientConfigs as config>
-				ForgeConfigRegistry.INSTANCE.register("${modid}", ModConfig.Type.CLIENT, ${config.getModElement().getName()}Configuration.SPEC, "${config.file}.toml");
+				container.registerConfig(ModConfig.Type.CLIENT, ${config.getModElement().getName()}Configuration.SPEC, "${config.file}.toml");
 				</#list>
 			});
 		}

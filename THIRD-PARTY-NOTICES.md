@@ -8,9 +8,13 @@ reproduced below.
 
 ## Forge Config API Port
 
-The generated mods depend on Forge Config API Port by Fuzs (`forgeconfigapiport`), which is licensed under MPL-2.0.
-Forge Config API Port is not redistributed with this plugin. It is resolved as a Gradle dependency of the generated mod
-through the `forgeconfigapiport` ModAPI definition shipped with this plugin.
+The generated Fabric mods depend on Forge Config API Port by Fuzs (`forgeconfigapiport`), which is licensed under
+MPL-2.0. Forge Config API Port is not redistributed with this plugin. It is resolved as a Gradle dependency from the
+managed `build.gradle` block that this plugin writes for Fabric workspaces. Forge and NeoForge workspaces use the
+native configuration API of their loader and do not depend on the port.
+
+Fabric 1.21.1 and newer also resolve Night Config (`com.electronwill.night-config:core` and
+`com.electronwill.night-config:toml`) from Maven Central. Night Config is not redistributed with this plugin.
 
 ## Compile time references (`libs/`)
 
