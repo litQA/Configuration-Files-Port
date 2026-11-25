@@ -10,7 +10,7 @@ build automatically. No external API has to be enabled in the workspace settings
 | | |
 | --- | --- |
 | Plugin id | `forge-config-api` |
-| Plugin version | `1.1.1.1-beta` |
+| Plugin version | `1.1.1.2-beta` |
 | MCreator | 2026.3 EAP (`202600344621`; the descriptor also accepts `2026003`) |
 | Java | 25 |
 | Plugin package | `com.litqa.forgeconfigapiport` |
@@ -28,8 +28,8 @@ build automatically. No external API has to be enabled in the workspace settings
 | Fabric | `fabric-26.1.2`, `fabric-26.2`, `fabric-26.3` | Forge Config API Port v5 | `.toml` |
 
 The Forge 1.12.2 generator is a legacy generator: every configuration element is loaded from its own
-`config/<file>.cfg` during `FMLPreInitializationEvent`. The old Forge configuration system has no equivalent of
-`COMMON`, `SERVER` or `CLIENT`, so the selected configuration type is ignored on that generator.
+`config/<file>.cfg` from the generated base mod `preInit` lifecycle method. The old Forge configuration system has no
+equivalent of `COMMON`, `SERVER` or `CLIENT`, so the selected configuration type is ignored on that generator.
 
 ## Features
 
@@ -44,7 +44,9 @@ The Forge 1.12.2 generator is a legacy generator: every configuration element is
   added only when the workspace is a Fabric workspace with at least one configuration element, and it is removed when
   the workspace switches to a native Forge or NeoForge generator.
 * Injects the generated Fabric configuration initializer into `fabric.mod.json` only for Fabric workspaces with
-  configuration elements. Forge and NeoForge discover the generated initializer through their event bus.
+  configuration elements. Forge 1.20.1 and newer and NeoForge discover the generated initializer through their event
+  bus. Forge 1.12.2 calls the initializer from the generated base mod `preInit` method, with a tick fallback for
+  locked base mod files.
 * Removes the legacy `forgeconfigapiport` workspace API id that older releases wrote into
   `WorkspaceSettings#getMCreatorDependenciesRaw()`.
 * Ships empty ModAPI compatibility markers for every supported generator. They keep older workspaces openable and do
@@ -197,6 +199,8 @@ It does not contain `libs/` or test sources.
   generator to a newer port release requires a plugin source change.
 * **Legacy Forge 1.12.2 API.** The generator uses the old `net.minecraftforge.common.config.Configuration` API. It
   does not support TOML, config screens or the modern `ModConfig` lifecycle.
+* **Locked Forge 1.12.2 base mod files.** If the generated base mod class is locked, the `preInit` call is not
+  injected. The configuration class then initializes on the first client or server tick instead.
 
 ## Credits
 

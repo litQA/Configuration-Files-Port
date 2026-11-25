@@ -56,6 +56,11 @@ public class Launcher extends JavaPlugin {
 	private static final String MANAGED_BLOCK_END = "// <<< forge_config_api managed block <<<";
 	/** Matches the main entrypoint array of a generated fabric.mod.json. */
 	private static final Pattern MAIN_ENTRYPOINT_ARRAY = Pattern.compile("\"main\"\\s*:\\s*\\[");
+	/** Template of the Forge 1.12.2 base mod class. */
+	private static final String FORGE_LEGACY_MOD_TEMPLATE = "modbase/mod.java.ftl";
+	/** Matches the pre-initialization method of a generated Forge 1.12.2 base mod class. */
+	private static final Pattern FORGE_LEGACY_PRE_INIT = Pattern.compile(
+			"public\\s+void\\s+preInit\\s*\\(\\s*FMLPreInitializationEvent\\s+event\\s*\\)\\s*\\{");
 
 	/** Fabric Forge Config API Port coordinates and the Gradle configuration that each generator expects. */
 	private static final Map<String, FabricDependency> FABRIC_DEPENDENCIES = Map.ofEntries(
@@ -86,7 +91,10 @@ public class Launcher extends JavaPlugin {
 			PluginElementTypes.load();
 		});
 
-		addListener(ModifyTemplateResultEvent.class, Launcher::addConfigurationEntrypoint);
+		addListener(ModifyTemplateResultEvent.class, event -> {
+			addConfigurationEntrypoint(event);
+			addForgeLegacyConfigurationInit(event);
+		});
 		addListener(MCreatorLoadedEvent.class, event -> {
 			Workspace workspace = event.getMCreator().getWorkspace();
 			if (workspace != null)
@@ -122,6 +130,62 @@ public class Launcher extends JavaPlugin {
 
 		String entrypoint = packagePath + ".init." + modName + CONFIG_ENTRYPOINT_SUFFIX;
 		event.setTemplateOutput(addMainEntrypoint(event.getTemplateOutput(), entrypoint));
+	}
+
+	/**
+	 * Calls the generated Forge 1.12.2 configuration initializer from the pre-initialization lifecycle method.
+	 * <p>
+	 * Forge 1.12.2 lifecycle events are not EventBus events, so the generated configuration class cannot subscribe to
+	 * {@code FMLPreInitializationEvent}. The base mod class is the only reliable place that runs early enough; the
+	 * generated configuration class also has a tick fallback for locked base mod files.
+	 *
+	 * @param event template generation event, only the Forge 1.12.2 base mod template is handled
+	 */
+	private static void addForgeLegacyConfigurationInit(ModifyTemplateResultEvent event) {
+		if (!FORGE_LEGACY_MOD_TEMPLATE.equals(event.getTemplateName()))
+			return;
+
+		Map<String, Object> dataModel = event.getDataModel();
+		Object workspaceInfo = dataModel.get("w");
+		if (!(workspaceInfo instanceof WorkspaceInfo info) || !info.hasElementsOfType(CONFIG_ELEMENT_TYPE))
+			return;
+
+		Object packageName = dataModel.get("package");
+		Object javaModName = dataModel.get("JavaModName");
+		if (!(packageName instanceof String packagePath) || !(javaModName instanceof String modName))
+			return;
+
+		String output = event.getTemplateOutput();
+		String updated = injectForgeLegacyConfigurationInit(output, packagePath, modName);
+		if (updated != null && !updated.equals(output))
+			event.setTemplateOutput(updated);
+	}
+
+	/**
+	 * Inserts the configuration initializer call into a generated Forge 1.12.2 base mod class.
+	 *
+	 * @param output      generated base mod source
+	 * @param packagePath package of the generated mod
+	 * @param modName     Java mod class name without the {@code Configs} suffix
+	 * @return updated source, or the input when the marker is absent or the call already exists
+	 */
+	static String injectForgeLegacyConfigurationInit(String output, String packagePath, String modName) {
+		if (output == null || output.isBlank())
+			return output;
+
+		String call = packagePath + ".init." + modName + CONFIG_ENTRYPOINT_SUFFIX + ".init(event);";
+		if (output.contains(call))
+			return output;
+
+		Matcher matcher = FORGE_LEGACY_PRE_INIT.matcher(output);
+		if (!matcher.find()) {
+			LOG.warn("Could not find the preInit method in the generated Forge 1.12.2 mod class");
+			return output;
+		}
+
+		StringBuilder updated = new StringBuilder(output);
+		updated.insert(matcher.end(), "\n\t\t" + call);
+		return updated.toString();
 	}
 
 	/**

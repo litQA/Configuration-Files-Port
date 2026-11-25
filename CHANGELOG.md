@@ -1,5 +1,17 @@
 # Changelog
 
+## 1.1.1.2-beta
+
+### Fixes
+
+* Fixed the Forge 1.12.2 configuration initializer. It is now called from the generated base mod `preInit` method
+  instead of subscribing to the non-EventBus `FMLPreInitializationEvent`. The generated configuration class also
+  initializes on the first client or server tick when the base mod file is locked.
+
+### Known Limitations
+
+* Locked Forge 1.12.2 base mod files prevent the `preInit` call and defer configuration loading to the first tick.
+
 ## 1.1.1.1-beta
 
 ### New Content

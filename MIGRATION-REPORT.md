@@ -24,7 +24,7 @@ Forge and NeoForge no longer use Forge Config API Port as a prerequisite.
   `ModContainer#registerConfig` with `COMMON`, `SERVER` and `CLIENT`.
 * NeoForge 26.3 uses the same `ModConfigSpec` API with `LOCAL`, `SYNCED` and `CLIENT`.
 * Forge 1.12.2 uses the legacy `net.minecraftforge.common.config.Configuration` API, `Property` fields and one
-  `config/<file>.cfg` file per element, loaded during `FMLPreInitializationEvent`.
+  `config/<file>.cfg` file per element, loaded from the generated base mod `preInit` lifecycle method.
 
 The `apis/forgeconfigapiport.yaml` file now contains only empty compatibility markers. It does not add Gradle
 dependencies or expose the Fabric implementation through the workspace external API list.
@@ -57,7 +57,7 @@ The following generator resource directories were removed because they are outsi
 * The `config` mod element type, Blockly editor, block ids, field names, data list and language keys are unchanged.
   Existing workspaces do not require a data migration.
 * The generated class names and package layout are unchanged.
-* The plugin package version is `1.1.1.1-beta` and the archive name is `forge-config-api-2026.3.zip`.
+* The plugin package version is `1.1.1.2-beta` and the archive name is `forge-config-api-2026.3.zip`.
 * The Gradle wrapper uses the public Gradle 9.8.0 distribution URL with distribution URL validation enabled.
 * The plugin descriptor still accepts MCreator `202600344621` and `2026003`.
 
